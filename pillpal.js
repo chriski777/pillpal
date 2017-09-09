@@ -14,10 +14,13 @@ exports.handler = (event, context, callback) => {
             context.done('error','reading dynamodb failed: '+err);
         }
         for (var i in data.Items) {
-            var x = data.Items[i].meds[2];
-            console.log(x);
+            var x = data.Items[i]["meds"].L;
+            // console.log(x);
             
-            
+            for(var a in x){
+                var temp = x[a].M;
+                console.log(temp.next_med.S);
+            }
             context.done(null, "Ciao!");
         }
     });
