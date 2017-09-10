@@ -19,6 +19,9 @@ var medRemindReprompt = "Sorry, I didn't get that. Would you like to know what m
 
 var noMedicineErrorMessage = "Sorry, we couldn't find that medicince in the file. " + tryAgainMessage;
 
+var promptQuestion = ["Do you have another question you'd like me to answer?", "Is there another question you'd like to ask?", "Is there anything else you want to ask?",
+"Do you have another question?", "What else can I do for you?"];
+
 var goodbyeMessage = "OK, good bye.";
 
 var newline = "\n";
@@ -32,6 +35,14 @@ var pills_left;
 var client_intervals;
 
 var medNames;
+
+var nodeNum;
+
+var medications;
+
+var pharmacyInformation;
+
+var doctorInformation;
 
 var states = {
     ASKMODE: '_ASKMODE',
@@ -57,11 +68,12 @@ exports.handler = function (event, context, callback) {
         client_name = data.Items[0]["client_name"].S.split(" ");
         pills_left = data.Items[0]["times_left"].L;
         client_intervals = data.Items[0]["intervals"];
+        pharmacyInformation = data.Items[0]["pharmacy"];
+        doctorInformation = data.Items[0]["doctor"];
         alexa.registerHandlers(newSessionHandlers, startSessionHandlers, askSessionHandlers);
         alexa.execute();
     });
 };
-
 var newSessionHandlers = {
     'LaunchRequest': function() {
         this.handler.state = states.STARTMODE;
@@ -81,42 +93,47 @@ var startSessionHandlers = Alexa.CreateStateHandler(states.STARTMODE, {
             } 
         }
         if (isDone) {
-            appendMSG = "Congratulations! You've finished your medications for today."
-            this.emit(':tell', appendMSG);
+            output = "Congratulations! You've finished your medications for today. "
+            var promptIndex = Math.floor(Math.random() * promptQuestion.length);
+            this.emit(':ask', output + promptQuestion[promptIndex], promptQuestion[promptIndex]);
         } else {
-            appendMSG = "Unfortunately, you still have unfinished medication. Would you like to know what medications you still have to take? "
+            appendMSG = "Unfortunately, you still have unfinished medications. Would you like to know what medications you still have to take? "
             this.handler.state = states.ASKMODE;
+            nodeNum = 0;
             this.emit(':ask', appendMSG, medRemindReprompt);           
         }
     },
     'ConfirmAdherenceIntent': function () {
-        output = "how do i confirm lmao";
+        output = "Confirm. ";
         this.emit(':tell', output);
     },
     'DoctorContactIntent': function(){
-        output = "you are a doctor b b";
-        this.emit(':tell', output);
+        output = "I am sending an SMS to your doctor. ";
+        var promptIndex = Math.floor(Math.random() * promptQuestion.length);
+        this.emit(':ask', output + promptQuestion[promptIndex], promptQuestion[promptIndex]);
     },
     'DoctorIntent': function(){
-        output = "doctors! gasp";
-        this.emit(':tell', output);
+        output = doctorInformation;
+        var promptIndex = Math.floor(Math.random() * promptQuestion.length);
+        this.emit(':ask', output + promptQuestion[promptIndex], promptQuestion[promptIndex]);
     },
     'ManualAdherenceIntent': function(){
         output = "ignore this";
         this.emit(':tell', output);
     },
     'NextDoseIntent': function(){
-        output = "your next dose is right now bihh";
+        output = "Your next dose is scheduled at " +  "";
         this.emit(':tell', output);
     },
     'PharmacyInfoIntent': function(){
-        output = "boi its cvs, aren't you tryna get that prize";
-        this.emit(':tell', output);
+        output = pharmacyInformation;
+        var promptIndex = Math.floor(Math.random() * promptQuestion.length);
+        this.emit(':ask', output + promptQuestion[promptIndex], promptQuestion[promptIndex]);
     },
     'RefillIntent': function(){
-        output = "I refilled your prescription booboo";
-        this.emit(':tell', output);
-    },
+        output = "I refilled your prescription. You should get a confirmation soon.";
+        var promptIndex = Math.floor(Math.random() * promptQuestion.length);
+        this.emit(':ask', output + promptQuestion[promptIndex], promptQuestion[promptIndex]);    },
     'AMAZON.StopIntent': function () {
         this.emit(':tell', goodbyeMessage);
     },
@@ -128,25 +145,41 @@ var startSessionHandlers = Alexa.CreateStateHandler(states.STARTMODE, {
         // Use this function to clear up and save any data needed between sessions
         this.emit('AMAZON.StopIntent');
     },
+    'AMAZON.YesIntent': function () {
+        response = "Awesome. What question would you like me to answer?";
+        this.emit(':ask',response, HelpMessage);
+    },
+    'AMAZON.NoIntent': function () {
+        this.emit(':tell',goodbyeMessage);
+    },
     'Unhandled': function () {
-        output = HelpMessage;
-        this.emit(':ask', output, welcomeRepromt);
+        this.emit(':ask', HelpMessage, welcomeReprompt);
     },
 });
 var askSessionHandlers = Alexa.CreateStateHandler(states.ASKMODE, {
     'AMAZON.YesIntent': function () {
-        medications = ""
-        for (var i in medNames) {
-            if (i < medNames.length - 1) {
-                medications = medications + " " + pills_left[i].N.toString() + " doses of " + medNames[i] +",";
-            } else {
-                medications = medications + "and " + pills_left[i].N.toString() + " doses of " + medNames[i];
-            }
+        var response;
+        var promptIndex;
+        switch(nodeNum) {
+            case 0:
+                medications = ""
+                for (var i in medNames) {
+                    if (i < medNames.length - 1) {
+                        medications = medications + " " + pills_left[i].N.toString() + " doses of " + medNames[i] +",";
+                    } else {
+                        medications = medications + "and " + pills_left[i].N.toString() + " doses of " + medNames[i];
+                    }
+                }
+                promptIndex = Math.floor(Math.random() * promptQuestion.length);
+                response = "You have " + medications + " left for today. " + promptQuestion[promptIndex];
+                break;
         }
-        this.emit(':tell', "You have " + medications + " left for today.")
+        this.handler.state = states.STARTMODE;
+        nodeNum = 0;
+        this.emit(':ask',response, promptQuestion[promptIndex])
     },
     'AMAZON.NoIntent': function () {
-        this.emit(':tell', "Okay. Make sure to not forget your medication!")
+        this.emit(':tell', "Okay. Make sure to not forget!")
     }
 });
 
